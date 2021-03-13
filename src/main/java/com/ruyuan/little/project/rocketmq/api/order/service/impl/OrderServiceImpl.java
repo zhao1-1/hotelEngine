@@ -153,8 +153,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Integer informPayOrderSuccessed(String orderNo, String phoneNumber) {
-        // 订单信息
-        OrderInfoDTO orderInfo = this.getOrderInfo(orderNo, phoneNumber);
+        OrderInfoDTO orderInfo = null;
         try {
             // 获取订单分布式锁防止订单已取消
             CommonResponse<Boolean> commonResponse = redisApi.lock(ORDER_LOCK_KEY_PREFIX + orderNo,
@@ -165,6 +164,16 @@ public class OrderServiceImpl implements OrderService {
                                                                    LittleProjectTypeEnum.ROCKETMQ);
             if (Objects.equals(commonResponse.getCode(), ErrorCodeEnum.SUCCESS.getCode())
                     && Objects.equals(commonResponse.getData(), Boolean.TRUE)) {
+                // 获取分布式锁成功
+
+                // 订单信息
+                orderInfo = this.getOrderInfo(orderNo, phoneNumber);
+
+                // 判断订单状态是否是待支付
+                if (!Objects.equals(OrderStatusEnum.WAITING_FOR_PAY.getStatus(), orderInfo.getStatus())) {
+                    throw new BusinessException("订单状态不是待支付该订单不可以支付,订单号：" + orderNo);
+                }
+
                 // 修改订单的状态
                 long payTime = new Date().getTime() / 1000;
                 this.updateOrderStatusAndPayTime(orderNo, payTime, phoneNumber);
@@ -183,7 +192,7 @@ public class OrderServiceImpl implements OrderService {
                             phoneNumber,
                             LittleProjectTypeEnum.ROCKETMQ);
         }
-        return orderInfo.getId();
+        return orderInfo != null ? orderInfo.getId() : null;
 
     }
 

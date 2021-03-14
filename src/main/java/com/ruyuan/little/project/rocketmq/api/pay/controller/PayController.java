@@ -68,6 +68,7 @@ public class PayController {
         if (Objects.equals(response.getCode(), ErrorCodeEnum.FAIL.getCode())) {
             // redis请求失败
             LOGGER.info("pay order wx callback redis dubbo interface fail orderNo:{}", orderNo);
+            return CommonResponse.fail();
         }
 
         // redis操作成功
